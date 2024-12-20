@@ -1,0 +1,509 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+### 1. Load the Dataset
+```{r}
+# Load each file with the correct path
+tags <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/tag.csv")
+links <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/link.csv")
+genome_scores <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/genome_scores.csv")
+genome_tags <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/genome_tags.csv")
+ratings <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/rating.csv")
+movies <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/movie.csv")
+
+
+```
+
+### 2. Data Types and Structure Check
+
+```{r}
+# Quick structure check
+str(tags)
+
+```
+
+```{r}
+str(links)
+
+```
+
+```{r}
+str(genome_scores)
+
+```
+
+```{r}
+str(genome_tags)
+
+```
+
+```{r}
+str(ratings)
+
+```
+
+```{r}
+str(movies)
+```
+### 3. Missing Values
+```{r}
+# Check for NA values
+sapply(list(tags, links, genome_scores, genome_tags, ratings, movies), function(df) sum(is.na(df)))
+
+```
+### 4. Missing values column wise
+```{r}
+# Check for NA values by column in each dataset
+lapply(list(tags = tags, links = links, genome_scores = genome_scores, genome_tags = genome_tags, ratings = ratings, movies = movies), 
+       function(df) sapply(df, function(col) sum(is.na(col))))
+
+```
+### 5. Checking and Dropping NA values in links dataset
+```{r}
+# Check row count before dropping NA values in tmdbId
+before_count <- nrow(links)
+cat("Row count before dropping NA values in tmdbId:", before_count, "\n")
+
+# Drop rows where tmdbId is NA
+links <- links[!is.na(links$tmdbId), ]
+
+# Check row count after dropping NA values in tmdbId
+after_count <- nrow(links)
+cat("Row count after dropping NA values in tmdbId:", after_count, "\n")
+
+```
+### 6. Checking blank values
+```{r}
+# Function to check for blank values in each column of a data frame
+check_blank_values <- function(df) {
+  sapply(df, function(col) sum(col == "", na.rm = TRUE))
+}
+
+# Check for blank values in each dataset
+cat("Blank values in 'tags':\n")
+print(check_blank_values(tags))
+
+cat("\nBlank values in 'links':\n")
+print(check_blank_values(links))
+
+cat("\nBlank values in 'genome_scores':\n")
+print(check_blank_values(genome_scores))
+
+cat("\nBlank values in 'genome_tags':\n")
+print(check_blank_values(genome_tags))
+
+cat("\nBlank values in 'ratings':\n")
+print(check_blank_values(ratings))
+
+cat("\nBlank values in 'movies':\n")
+print(check_blank_values(movies))
+
+```
+### 7.Standardizing Timestamps
+```{r}
+tags$timestamp <- as.Date(tags$timestamp)
+ratings$timestamp <- as.Date(ratings$timestamp)
+
+```
+
+### 8. Printing Dimensions of datasets
+```{r}
+# Calculate dimensions of each dataset
+dim_tags <- dim(tags)
+dim_links <- dim(links)
+dim_genome_scores <- dim(genome_scores)
+dim_genome_tags <- dim(genome_tags)
+dim_ratings <- dim(ratings)
+dim_movies <- dim(movies)
+
+# Print dimensions
+print(dim_tags)
+print(dim_links)
+print(dim_genome_scores)
+print(dim_genome_tags)
+print(dim_ratings)
+print(dim_movies)
+
+```
+### 9. Checking and Dropping NA values in tags dataset
+```{r}
+# Check row count before dropping NA values in tag
+before_count <- nrow(tags)
+cat("Row count before dropping NA values in tag:", before_count, "\n")
+
+# Drop rows where tag is NA
+tags <- tags[!is.na(tags$tag), ]
+
+# Check row count after dropping NA values in tmdbId
+after_count <- nrow(tags)
+cat("Row count after dropping NA values in tag:", after_count, "\n")
+
+```
+### 10. Checking the dimensions of tags dataset
+```{r}
+dim_tags <- dim(tags)
+print(dim_tags)
+```
+
+### 11. Checkings outliers in ratings
+```{r}
+# Check for out-of-range ratings and count them
+out_of_range_ratings <- subset(ratings, rating < 0 | rating > 5)
+out_of_range_count <- nrow(out_of_range_ratings)
+
+# Display the count of out-of-range ratings
+print(paste("Number of ratings out of range (0-5):", out_of_range_count))
+
+
+
+# Now filter the ratings within the range 0 to 5
+ratings <- subset(ratings, rating >= 0 & rating <= 5)
+
+```
+### 12. Checking duplicates in datasets
+```{r}
+library(data.table)
+
+# Convert each dataset to data.table format
+tags <- as.data.table(tags)
+links <- as.data.table(links)
+genome_scores <- as.data.table(genome_scores)
+genome_tags <- as.data.table(genome_tags)
+ratings <- as.data.table(ratings)
+movies <- as.data.table(movies)
+
+# Count duplicates using .N
+duplicates_tags <- nrow(tags) - uniqueN(tags)
+duplicates_links <- nrow(links) - uniqueN(links)
+duplicates_genome_scores <- nrow(genome_scores) - uniqueN(genome_scores)
+duplicates_genome_tags <- nrow(genome_tags) - uniqueN(genome_tags)
+duplicates_ratings <- nrow(ratings) - uniqueN(ratings)
+duplicates_movies <- nrow(movies) - uniqueN(movies)
+
+# Print duplicate counts
+cat("Duplicate rows in tags:", duplicates_tags, "\n")
+cat("Duplicate rows in links:", duplicates_links, "\n")
+cat("Duplicate rows in genome_scores:", duplicates_genome_scores, "\n")
+cat("Duplicate rows in genome_tags:", duplicates_genome_tags, "\n")
+cat("Duplicate rows in ratings:", duplicates_ratings, "\n")
+cat("Duplicate rows in movies:", duplicates_movies, "\n")
+
+```
+
+```{r}
+# Check the range of the relevance scores
+range_relevance <- range(genome_scores$relevance)
+print(paste("Minimum relevance:", range_relevance[1]))
+print(paste("Maximum relevance:", range_relevance[2]))
+
+# If all values are within 0 and 1, no need to normalize
+if (range_relevance[1] >= 0 && range_relevance[2] <= 1) {
+  print("All values are within the range 0 to 1; no normalization is needed.")
+} else {
+  library(scales)
+  genome_scores$relevance <- rescale(genome_scores$relevance, to = c(0, 1))
+}
+
+# Optionally, format relevance scores for consistent readability
+genome_scores$relevance <- format(genome_scores$relevance, scientific = FALSE)
+print("Genome Scores DataFrame with formatted relevance values:")
+print(head(genome_scores))
+
+
+```
+```{r}
+# Save each cleaned DataFrame to CSV files in the specified directory
+write.csv(tags, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_tags.csv", row.names = FALSE)
+write.csv(links, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_links.csv", row.names = FALSE)
+write.csv(genome_scores, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_genome_scores.csv", row.names = FALSE)
+write.csv(genome_tags, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_genome_tags.csv", row.names = FALSE)
+write.csv(ratings, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_ratings.csv", row.names = FALSE)
+write.csv(movies, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_movies.csv", row.names = FALSE)
+
+```
+
+```{r}
+# Load datasets
+tags <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/tag.csv")
+links <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/link.csv")
+genome_scores <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/genome_scores.csv")
+genome_tags <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/genome_tags.csv")
+ratings <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/rating.csv")
+movies <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/movie.csv")
+
+# Print dimensions before cleaning
+cat("Dimensions before cleaning:\n")
+cat("tags:", dim(tags), "\n")
+cat("links:", dim(links), "\n")
+cat("genome_scores:", dim(genome_scores), "\n")
+cat("genome_tags:", dim(genome_tags), "\n")
+cat("ratings:", dim(ratings), "\n")
+cat("movies:", dim(movies), "\n")
+
+
+
+
+
+```
+
+```{r}
+# Reload cleaned datasets to capture post-cleaning dimensions
+c
+
+# Print dimensions after cleaning
+cat("\nDimensions after cleaning:\n")
+cat("tags:", dim(tags), "\n")
+cat("links:", dim(links), "\n")
+cat("genome_scores:", dim(genome_scores), "\n")
+cat("genome_tags:", dim(genome_tags), "\n")
+cat("ratings:", dim(ratings), "\n")
+cat("movies:", dim(movies), "\n")
+```
+
+```{r}
+library(dplyr)
+
+# Load data
+ratings <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_ratings.csv")
+movies <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_movies.csv")  # Replace with your actual path
+genome_scores <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/grp1_cleaned_genome_scores.csv")  # Replace with your actual path
+
+# Summarize genome_scores before joining
+genome_scores_summary <- genome_scores %>%
+  group_by(movieId) %>%
+  summarize(average_relevance = mean(relevance))
+
+# Join movies with ratings
+movie_ratings <- left_join(movies, ratings, by = "movieId")
+
+# Join the result with summarized genome_scores
+combined_data <- left_join(movie_ratings, genome_scores_summary, by = "movieId")
+
+# Check the first few rows to confirm the join
+head(combined_data)
+
+
+```
+
+```{r}
+# Write the combined data to a CSV file
+write.csv(combined_data, "/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/group1_combined_data.csv", row.names = FALSE)
+```
+
+```{r}
+# Load the combined data if not already loaded
+combined_data <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/group1_combined_data.csv")
+
+# Get the dimensions of the dataset
+dimensions <- dim(combined_data)
+print(dimensions)
+```
+
+```{r}
+# Get summary statistics of the dataset
+statistics <- summary(combined_data)
+print(statistics)
+```
+
+```{r}
+# Load the combined data if not already loaded
+combined_data <- read.csv("/Users/nikki/Documents/DataMining_Group1_Project/Data-Alchemist/datasets/group1_combined_data.csv")
+
+# Count NA values in each column
+na_counts <- sapply(combined_data, function(x) sum(is.na(x)))
+
+# Print the counts of NA values per column
+print(na_counts)
+
+```
+### Till here we combined three cleaned datasets (movies , ratings and genome_scores csv files)
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+---
+title: "R Notebook"
+output: html_notebook
+---
+### this additional code for finalizing dataset after sampling
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+# Load dataset
+# Replace 'movies.csv' with the path to your dataset
+data <- read.csv("C:/Users/karth/OneDrive/Documents/Group_1_Data_mining/Data-Alchemist/datasets/group1_combined_data.csv", stringsAsFactors = FALSE)
+
+# 1. Check the structure of the dataset
+cat("Structure of the dataset:\n")
+str(data)
+
+# 2. Get the dimensions of the dataset (rows and columns)
+cat("\nDimensions of the dataset (rows, columns):\n")
+print(dim(data))
+
+# 3. Count of NA values in each column
+cat("\nNumber of NA values in each column:\n")
+na_counts <- colSums(is.na(data))
+print(na_counts)
+
+# 4. Count of blank values (empty strings) in each column
+cat("\nNumber of blank ('') values in each column:\n")
+blank_counts <- sapply(data, function(x) sum(x == "", na.rm = TRUE))
+print(blank_counts)
+
+# 5. Summary of missing and blank values combined
+cat("\nSummary of NA and blank values in each column:\n")
+combined_counts <- data.frame(
+  Column = names(data),
+  NA_Count = na_counts,
+  Blank_Count = blank_counts,
+  Total_Missing = na_counts + blank_counts
+)
+print(combined_counts)
+
+
+```
+
+```{r}
+# Install dplyr package if not already installed
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  install.packages("dplyr")
+}
+
+# Load the dplyr package
+library(dplyr)
+
+# Remove rows where userId, rating, timestamp, or average_relevance have NA values
+cleaned_data <- data %>%
+  filter(!is.na(userId) & !is.na(rating) & !is.na(timestamp) & !is.na(average_relevance))
+
+# Summary of cleaned dataset
+cat("Dimensions of the cleaned dataset (rows, columns):\n")
+print(dim(cleaned_data))
+
+cat("\nNumber of NA values in each column after cleaning:\n")
+print(colSums(is.na(cleaned_data)))
+
+# Save the cleaned dataset
+#write.csv(cleaned_data, "cleaned_movies.csv", row.names = FALSE)
+
+# Print a preview of the cleaned dataset
+cat("\nPreview of the cleaned dataset:\n")
+print(head(cleaned_data))
+
+
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Assuming 'cleaned_data' is loaded from the previous steps
+# Let's say we're stratifying by a categorical column 'userId' (or choose another column as per your data structure)
+
+# Check if there are enough data points per user for stratified sampling
+cat("Number of observations per user:\n")
+print(table(cleaned_data$userId))
+
+# Performing stratified sampling: Sample 10% of each category
+# Ensure that each category has enough data; otherwise, reduce the sample size or adjust parameters
+set.seed(123)  # for reproducibility
+stratified_sample <- cleaned_data %>%
+  group_by(userId) %>%  # Replace 'userId' with the relevant column name for stratification
+  sample_frac(0.1, replace = FALSE)  # Adjust the fraction as needed; set 'replace = TRUE' if necessary
+
+# Print the dimensions of the sampled dataset
+cat("Dimensions of the sampled dataset (rows, columns):\n")
+print(dim(stratified_sample))
+
+# Check for null values in the sampled dataset
+cat("\nNumber of NA values in each column after sampling:\n")
+print(colSums(is.na(stratified_sample)))
+
+# Write the sampled data to a CSV file
+write.csv(stratified_sample, "stratified_sample.csv", row.names = FALSE)
+
+# Print a preview of the sampled dataset
+cat("\nPreview of the sampled dataset:\n")
+print(head(stratified_sample))
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Load the stratified sample from the CSV file
+data <- read.csv("stratified_sample.csv", stringsAsFactors = FALSE)
+
+# Ensure genres are treated as character data
+data$genres <- as.character(data$genres)
+
+# Separate genres into multiple rows and then apply one-hot encoding
+data_one_hot <- data %>%
+  # Separate genres based on the pipe delimiter into different rows
+  separate_rows(genres, sep = "\\|") %>%
+  # Apply one-hot encoding: create new columns for each genre, marked as 1
+  mutate(value = 1) %>%
+  pivot_wider(
+    id_cols = setdiff(names(data), "genres"), # Keeps all other columns stable without duplication
+    names_from = genres, 
+    values_from = value, 
+    values_fill = list(value = 0)
+  )
+
+# Print the structure and a preview of the dataset
+print(str(data_one_hot))
+print(head(data_one_hot))
+
+# Save the one-hot encoded data to a CSV file for further use
+write.csv(data_one_hot, "one_hot_encoded_data.csv", row.names = FALSE)
+
+```
+
+```{r}
+library(dplyr)
+library(tidyr)
+
+# Load the one-hot encoded data from the CSV file
+data <- read.csv("one_hot_encoded_data.csv", stringsAsFactors = FALSE)
+
+# Write the data to a new file
+write.csv(data, "dm_group1_sampled_data.csv", row.names = FALSE)
+
+# Print the dimensions of the dataset
+cat("Dimensions of the dataset:\n")
+print(dim(data))
+
+# Print the structure of the dataset
+cat("\nStructure of the dataset:\n")
+str(data)
+
+# Check for null values in each column
+cat("\nNull values in each column:\n")
+null_values <- sapply(data, function(x) sum(is.na(x)))
+print(null_values)
+
+# Print summary statistics for the dataset
+cat("\nSummary statistics for the dataset:\n")
+summary_data <- summary(data)
+print(summary_data)
+
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

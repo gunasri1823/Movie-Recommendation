@@ -1,0 +1,144 @@
+---
+title: "Movie_recommend_part2"
+output: html_document
+date: "2024-11-22"
+---
+```{r}
+# Install recommenderlab if not installed
+if (!requireNamespace("recommenderlab", quietly = TRUE)) {
+  install.packages("recommenderlab")
+}
+
+# Load required libraries
+library(recommenderlab)
+library(reshape2)
+
+```
+
+```{r}
+# Load the data
+data <- read.csv("D:/DM_Project/Data-Alchemist/stratified_sample.csv")
+data <- head(data, 10000)
+```
+
+```{r}
+# Select relevant columns (userId, movieId, rating)
+data_filtered <- data %>% select(userId, movieId, rating)
+```
+
+```{r}
+# Convert the dataset to a realRatingMatrix
+data_matrix <- as(data_filtered, "realRatingMatrix")
+```
+
+```{r}
+# Split the data into training and testing sets (e.g., 80-20 split)
+set.seed(123)
+evaluation_scheme <- evaluationScheme(data_matrix, method = "split", train = 0.8, given = 10, goodRating = 4)
+```
+```{r}
+# Create a User-Based Collaborative Filtering model
+ubcf_model <- Recommender(getData(evaluation_scheme, "train"), method = "UBCF")
+```
+
+```{r}
+# Make predictions for the test set
+predictions <- predict(ubcf_model, getData(evaluation_scheme, "known"), type = "ratings")
+```
+
+```{r}
+# Calculate prediction accuracy
+accuracy <- calcPredictionAccuracy(predictions, getData(evaluation_scheme, "unknown"))
+```
+
+```{r}
+# Calculate prediction accuracy (RMSE and MAE)
+accuracy <- calcPredictionAccuracy(predictions, getData(evaluation_scheme, "unknown"))
+print("Accuracy Metrics (RMSE and MAE):")
+print(accuracy)
+```
+```{r}
+# Evaluate Precision and Recall
+evaluation_results <- evaluate(evaluation_scheme, method = "UBCF", type = "topNList", n = c(1, 3, 5, 10))
+print("Precision and Recall Metrics:")
+print(avg(evaluation_results))
+```
+
+```{r}
+# Print accuracy
+print(accuracy)
+
+```
+```{r}
+# Recommend items for a specific user (e.g., userId = 1)
+recommendations <- predict(ubcf_model, data_matrix[1], n = 5)
+print(as(recommendations, "list"))
+```
+```{r}
+# Recommend items based on a specific movie (e.g., "Jumanji")
+jumanji_movie_id <- data %>% filter(title == "Jumanji (1995)") %>% select(movieId) %>% distinct() %>% pull(movieId)
+
+# Find users who have rated "Jumanji" and recommend movies accordingly
+users_who_rated_jumanji <- data_filtered %>% filter(movieId == jumanji_movie_id) %>% select(userId) %>% distinct() %>% pull(userId)
+users_who_rated_jumanji
+
+```
+
+```{r}
+# Generate recommendations for the first user who rated "Jumanji"
+if (length(users_who_rated_jumanji) > 0) {
+  user_id <- users_who_rated_jumanji[1]
+  recommendations <- predict(ubcf_model, data_matrix[user_id], n = 5)
+  recommended_movie_ids <- as(recommendations, "list")[[1]]
+  recommended_titles <- data %>% filter(movieId %in% recommended_movie_ids) %>% select(movieId, title) %>% distinct()
+  print(recommended_titles)
+} else {
+  print("No users have rated 'Jumanji'.")
+}
+
+```
+# Item Based Filtering
+
+```{r}
+# Create an Item-Based Collaborative Filtering model
+ibcf_model <- Recommender(getData(evaluation_scheme, "train"), method = "IBCF")
+```
+
+```{r}
+# Make item-based predictions for the test set
+item_predictions <- predict(ibcf_model, getData(evaluation_scheme, "known"), type = "ratings")
+
+```
+
+```{r}
+# Calculate item-based prediction accuracy
+item_accuracy <- calcPredictionAccuracy(item_predictions, getData(evaluation_scheme, "unknown"))
+```
+
+```{r}
+# Print item-based accuracy
+print(item_accuracy)
+```
+```{r}
+# Recommend items based on a specific movie (e.g., "Jumanji") using item-based collaborative filtering
+jumanji_movie_id <- data %>% filter(title == "Iron Man (2008)") %>% select(movieId) %>% distinct() %>% pull(movieId)
+
+if (!is.na(jumanji_movie_id)) {
+  # Calculate item similarity matrix
+  similarity_matrix <- as.matrix(similarity(getData(evaluation_scheme, "train"), method = "cosine", which = "items"))
+
+  # Get similarity scores for the Jumanji movie
+  jumanji_index <- which(colnames(similarity_matrix) == as.character(jumanji_movie_id))
+  jumanji_similarities <- similarity_matrix[jumanji_index, ]
+
+  # Get top 5 most similar items (excluding itself)
+  similar_items <- order(jumanji_similarities, decreasing = TRUE)[2:6]
+  recommended_jumanji_movie_ids <- colnames(similarity_matrix)[similar_items]
+
+  # Get titles for the recommended movies
+  recommended_jumanji_titles <- data %>% filter(movieId %in% recommended_jumanji_movie_ids) %>% select(movieId, title) %>% distinct()
+  print(recommended_jumanji_titles)
+} else {
+  print("'Jumanji' movie not found in the dataset.")
+}
+```

@@ -1,0 +1,126 @@
+#Hybrid Recommandation Models
+
+```{r}
+# Ensure the recommenderlab library is loaded
+library(recommenderlab)
+library(dplyr)
+library(reshape2)
+
+# Load the data
+data <- read.csv("D:/DM_Project/Data-Alchemist/stratified_sample.csv")
+data <- head(data, 20000)
+
+# Convert the data into a rating matrix suitable for recommenderlab
+# Assuming the dataset has columns 'userId', 'movieId', 'rating', and 'title'
+ratings_matrix <- dcast(data, userId ~ movieId, value.var = "rating")
+
+# Convert data frame to realRatingMatrix
+ratings_matrix <- as(as.matrix(ratings_matrix[, -1]), "realRatingMatrix")
+
+# Create collaborative filtering recommender models
+collab_ubcf_model <- Recommender(ratings_matrix, method = "UBCF")
+collab_ibcf_model <- Recommender(ratings_matrix, method = "IBCF")
+
+# Create content-based filtering using item features
+# For content-based filtering, calculate similarity based on item features (e.g., genres, directors, actors)
+# Assuming there is a feature matrix available (replace 'item_features_matrix' with actual feature data)
+
+library(proxy)
+
+# Assuming data has additional columns such as genres, director, etc.
+# Create a content matrix (this is a placeholder, replace with actual features)
+item_features_matrix <- data %>% select(movieId, genres) %>% distinct() %>% mutate(genres = as.factor(genres))
+item_features_matrix <- as.data.frame(model.matrix(~ genres - 1, data = item_features_matrix))
+
+# Calculate cosine similarity between items based on features
+content_similarity <- as.matrix(dist(item_features_matrix, method = "cosine"))
+
+# Custom function to recommend items based on content similarity
+content_based_recommend <- function(movie_id, top_n = 5) {
+  movie_index <- which(rownames(content_similarity) == as.character(movie_id))
+  similarity_scores <- content_similarity[movie_index, ]
+  recommended_indices <- order(similarity_scores, decreasing = FALSE)[2:(top_n + 1)]
+  recommended_movie_ids <- rownames(content_similarity)[recommended_indices]
+  return(recommended_movie_ids)
+}
+
+# Hybrid collaborative and content-based filtering recommender model
+# Collaborative models include both UBCF and IBCF, and content-based filtering is simulated with RANDOM for a hybrid approach
+
+# Recommend items based on multiple movies
+movies_input <- c('Firm, The (1993)','Heavy Metal (1981)','Three Musketeers, The (1993)','Free Willy 2: The Adventure Home (1995)')
+
+# Get movieIds for the input movies
+input_movie_ids <- data %>% filter(title %in% movies_input) %>% select(movieId) %>% distinct() %>% pull(movieId)
+
+# Find users who have rated the input movies
+users_who_rated_input_movies <- data %>% filter(movieId %in% input_movie_ids) %>% select(userId) %>% distinct() %>% pull(userId)
+
+# Check for recommendations based on users who rated input movies
+if (length(users_who_rated_input_movies) >= 5) {
+  # Get the first 5 user IDs who rated the input movies
+  user_ids <- users_who_rated_input_movies[1:5]
+  
+  # Store recommendations for the first 5 users
+  recommendations_list <- list()
+  
+  for (i in 1:5) {
+    user_id <- user_ids[i]
+    ubcf_recommendations <- predict(collab_ubcf_model, ratings_matrix[user_id, ], n = 5)
+    ibcf_recommendations <- predict(collab_ibcf_model, ratings_matrix[user_id, ], n = 5)
+    content_recommendations <- content_based_recommend(input_movie_ids[1], top_n = 5)
+    
+    # Combine UBCF, IBCF, and content-based recommendations for hybrid
+    hybrid_recommendations <- unique(c(as(ubcf_recommendations, "list")[[1]], as(ibcf_recommendations, "list")[[1]], as(content_recommendations, "list")[[1]]))
+    recommendations_list[[i]] <- hybrid_recommendations
+  }
+  
+  # Find the common movies across all 5 users' recommendations
+  common_movies <- Reduce(intersect, recommendations_list)
+  
+  # Determine the final recommendations
+  final_recommendation_ids <- c()
+  
+  # Add common movies to the final recommendations (up to 5)
+  if (length(common_movies) > 0) {
+    final_recommendation_ids <- sample(common_movies, min(5, length(common_movies)))
+  }
+  
+  # If fewer than 5 common movies, add random movies from the first 5 users' recommendations
+  if (length(final_recommendation_ids) < 5) {
+    remaining_count <- 5 - length(final_recommendation_ids)
+    additional_movies <- unlist(recommendations_list) %>% unique() %>% setdiff(final_recommendation_ids)
+    final_recommendation_ids <- c(final_recommendation_ids, sample(additional_movies, min(remaining_count, length(additional_movies))))
+  }
+  
+  # Get the titles of the final recommended movies
+  final_recommended_titles <- data %>%
+    filter(movieId %in% final_recommendation_ids) %>%
+    select(movieId, title) %>%
+    distinct()
+  
+  # Print the final recommended titles
+  print(final_recommended_titles)
+  
+} else if (length(users_who_rated_input_movies) > 0) {
+  # Fallback to recommending based on the first user if less than 5 users have rated
+  user_id <- users_who_rated_input_movies[1]
+  ubcf_recommendations <- predict(collab_ubcf_model, ratings_matrix[user_id, ], n = 10)
+  ibcf_recommendations <- predict(collab_ibcf_model, ratings_matrix[user_id, ], n = 10)
+  content_recommendations <- content_based_recommend(input_movie_ids[1], top_n = 10)
+  
+  # Combine UBCF, IBCF, and content-based recommendations for hybrid
+  hybrid_recommendations <- unique(c(as(ubcf_recommendations, "list")[[1]], as(ibcf_recommendations, "list")[[1]], as(content_recommendations, "list")[[1]]))
+  
+  # Get the titles of the recommended movies
+  recommended_titles <- data %>% filter(movieId %in% hybrid_recommendations) %>% select(movieId, title) %>% distinct()
+  print(recommended_titles)
+  
+} else {
+  print("No users have rated the input movies.")
+}
+
+# Note: You may need to adjust the dataset to fit the correct format or pre-process the data accordingly.
+
+```
+

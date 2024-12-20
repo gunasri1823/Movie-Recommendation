@@ -1,0 +1,315 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+```
+
+```{r}
+dataset <- read.csv("datasets/stratified_sample.csv")
+# Limit dataset to 10,000 rows
+
+
+```
+
+#Initial Inspection
+```{r}
+# Check the structure of the dataset
+str(dataset)
+
+# Summary of numeric columns
+summary(dataset)
+
+# Check for missing values
+colSums(is.na(dataset))
+
+# Count duplicate rows
+num_duplicates <- sum(duplicated(dataset))
+print(paste("Number of duplicate rows:", num_duplicates))
+
+
+```
+
+#Explore Unique Values and Distributions
+```{r}
+# Count unique users and movies
+n_distinct(dataset$userId)
+n_distinct(dataset$movieId)
+
+# Frequency of ratings
+table(dataset$rating)
+
+# Histogram of ratings
+ggplot(dataset, aes(x = rating)) + 
+  geom_histogram(binwidth = 0.5, fill = "blue", color = "black") +
+  labs(title = "Distribution of Ratings", x = "Rating", y = "Count")
+
+```
+
+#Explore Genres: Split the genres column into multiple rows and analyze
+
+```{r}
+genres_split <- dataset %>%
+  separate_rows(genres, sep = "\\|")
+
+# Count movies by genre
+genre_counts <- genres_split %>%
+  count(genres, sort = TRUE)
+
+# Plot genre distribution
+ggplot(genre_counts, aes(x = reorder(genres, -n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(title = "Movies by Genre", x = "Genre", y = "Count")
+
+```
+
+#Examine User Behavior
+```{r}
+# Number of ratings per user
+user_activity <- dataset %>%
+  group_by(userId) %>%
+  summarise(ratings_count = n())
+
+ggplot(user_activity, aes(x = ratings_count)) +
+  geom_histogram(binwidth = 5, fill = "orange", color = "black") +
+  labs(title = "Distribution of Ratings Per User", x = "Number of Ratings", y = "Count")
+
+```
+
+#Calculate average ratings for each movie and visualize the distribution
+
+```{r}
+movie_avg_ratings <- dataset %>%
+  group_by(movieId, title) %>%
+  summarise(avg_rating = mean(rating), rating_count = n())
+
+head(movie_avg_ratings)
+
+ggplot(movie_avg_ratings, aes(x = avg_rating)) +
+  geom_histogram(binwidth = 0.25, fill = "green", color = "black") +
+  labs(title = "Average Ratings Distribution", x = "Average Rating", y = "Count")
+
+```
+
+#Top 10 highest-rated movies with sufficient reviews
+
+```{r}
+top_movies <- movie_avg_ratings %>%
+  filter(rating_count >= 10) %>%
+  arrange(desc(avg_rating)) %>%
+  head(10)
+
+print(top_movies)
+
+```
+
+#User Preferences by Genre
+
+```{r}
+user_genre_pref <- genres_split %>%
+  group_by(userId, genres) %>%
+  summarise(genre_count = n()) %>%
+  arrange(desc(genre_count))
+
+head(user_genre_pref)
+
+```
+
+#Average Rating per Genre
+
+```{r}
+avg_rating_genre <- genres_split %>%
+  group_by(genres) %>%
+  summarise(avg_rating = mean(rating))
+
+ggplot(avg_rating_genre, aes(x = reorder(genres, -avg_rating), y = avg_rating)) +
+  geom_bar(stat = "identity", fill = "purple", color = "black") +
+  coord_flip() +
+  labs(title = "Average Rating by Genre", x = "Genre", y = "Average Rating")
+
+```
+
+#Correlation Between Ratings and Relevance
+
+```{r}
+set.seed(123)
+sampled_data <- dataset[sample(1:nrow(dataset), 10000), ]
+ggplot(sampled_data, aes(x = average_relevance, y = rating)) +
+  geom_point(alpha = 0.5, color = "darkgreen") +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Correlation Between Relevance and Ratings", x = "Average Relevance", y = "Rating")
+
+```
+
+#Genre Encoding
+
+```{r}
+
+# One-hot encode genres
+genres_split <- dataset %>%
+  separate_rows(genres, sep = "\\|") %>% # Split genres by the "|" separator
+  mutate(value = 1) %>%
+  spread(genres, value, fill = 0) # Convert to wide format with one-hot encoding
+
+```
+
+```{r}
+# Calculate average ratings for movies
+movie_features <- dataset %>%
+  group_by(movieId, title) %>%
+  summarise(avg_rating = mean(rating, na.rm = TRUE), .groups = 'drop')
+
+
+```
+
+```{r}
+# Merge genres and average ratings into a single feature set
+content_features <- genres_split %>%
+  select(-userId, -rating, -timestamp) %>% # Remove irrelevant columns
+  group_by(movieId) %>%
+  summarise(across(everything(), max), .groups = 'drop') %>%
+  left_join(movie_features, by = "movieId") %>%
+  left_join(dataset %>% select(movieId, average_relevance) %>% distinct(), by = "movieId") # Include average_relevance
+
+```
+
+```{r}
+# Normalization function
+normalize <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# Normalize the feature set
+content_features <- content_features %>%
+  mutate(across(where(is.numeric), normalize)) # Normalize only numerical columns
+
+```
+
+
+```{r}
+content_features
+```
+
+
+```{r}
+# Check for duplicate rowtitles
+duplicates_rowtitles <- content_features$title.x[duplicated(content_features$title.x)]
+print("Duplicate RowTitles:")
+print(duplicates_rowtitles)
+
+```
+
+```{r}
+# Check for duplicate coltitles
+duplicates_coltitles <- content_features$title.y[duplicated(content_features$title.y)]
+print("Duplicate ColTitles:")
+print(duplicates_coltitles)
+
+```
+
+```{r}
+# Remove duplicate titles
+content_features <- content_features[!duplicated(content_features$title.x), ]
+content_features <- content_features[!duplicated(content_features$title.y), ]
+```
+
+```{r}
+length(content_features$title.x)
+length(content_features$title.y)
+```
+
+
+```{r}
+library(proxy)  # For cosine similarity
+
+# Extract numerical features for similarity computation
+feature_matrix <- as.matrix(content_features %>% select(-movieId, -title.x))
+
+# Compute similarity matrix
+similarity_matrix <- proxy::simil(feature_matrix, method = "cosine")
+
+# Convert to a data frame for easier manipulation
+similarity_df <- as.data.frame(as.matrix(similarity_matrix))
+#rownames(similarity_df) <- content_features$title
+#colnames(similarity_df) <- content_features$title 
+ 
+```
+
+
+```{r}
+similarity_df
+```
+
+```{r}
+anyDuplicated(rownames(similarity_df))
+anyDuplicated(colnames(similarity_df))
+```
+
+```{r}
+str(similarity_df)
+```
+
+```{r}
+duplicated(rownames(similarity_df))
+```
+
+
+```{r}
+class(similarity_matrix)  # Should return "dist"
+attributes(similarity_matrix)  # Check available attributes
+
+all(content_features$title.y == content_features$title.x)
+# test
+```
+
+
+```{r}
+attr(similarity_matrix, "Labels") <- content_features$title.x
+similarity_matrix <- as.matrix(similarity_matrix)
+rownames(similarity_matrix) <- content_features$title.x
+colnames(similarity_matrix) <- content_features$title.x
+#length(content_features$title.x) == 3290  # This should return TRUE
+length(content_features$title.x)
+length(content_features$title.y)
+```
+
+
+```{r}
+rownames(similarity_df) <- content_features$title.x
+colnames(similarity_df) <- content_features$title.y
+```
+
+
+```{r}
+recommend_movies <- function(movie_name, similarity_df, top_n = 5) {
+  # Check if movie exists
+  if (!(movie_name %in% rownames(similarity_df))) {
+    stop(paste("Movie", movie_name, "not found in the dataset!"))
+  }
+  
+  # Extract similarity scores and rank them
+  similar_movies <- similarity_df[movie_name, , drop = FALSE]
+  similar_movies <- data.frame(movie = names(similar_movies), similarity = as.numeric(similar_movies))
+  similar_movies <- similar_movies[order(-similar_movies$similarity), ]
+  similar_movies <- head(similar_movies, top_n + 1)  # Include the queried movie itself
+  
+  # Exclude the queried movie
+  similar_movies <- similar_movies[-1, ]
+  
+  return(similar_movies)
+}
+
+recommendations <- recommend_movies("Jumanji (1995)", similarity_df, top_n = 5)
+print(recommendations)
+```
+
