@@ -2,17 +2,19 @@
 #### Problem Statement: 
 The aim of this project is to develop a Movie Recommendation System that provides personalized movie suggestions based on user preferences and prior watching history. The
 system uses advanced data mining techniques to predict movies a user might enjoy, thereby enhancing user experience and engagement. This recommendation system is particularly useful for:
-● Streaming platforms like Netflix and Amazon Prime to retain users and enhance their experience.
-● Individual users who wish to discover movies tailored to their unique tastes.
-● Businesses seeking to understand consumer behavior through analytics derived from movie-watching patterns.
+
+1.Streaming platforms like Netflix and Amazon Prime to retain users and enhance their experience.
+2.Individual users who wish to discover movies tailored to their unique tastes.
+3.Businesses seeking to understand consumer behavior through analytics derived from movie-watching patterns.
 
 ### Description
 For this project, we used the MovieLens Dataset as the primary data source. To build the recommendation system, we selected a subset of the dataset, specifically focusing on rows with 1.9 million, ensuring efficient processing and model training.
 The dataset contains:
-● 20,000,263 ratings, 465,564 tag applications, and metadata for 27,278 movies.
-● Rich metadata: Includes movie titles, genres, and timestamps for user interactions.
-● User-specific information: Unique user IDs and their respective ratings enable personalized
-recommendations. 
+
+1.20,000,263 ratings, 465,564 tag applications, and metadata for 27,278 movies.
+2.Rich metadata: Includes movie titles, genres, and timestamps for user interactions.
+3.User-specific information: Unique user IDs and their respective ratings enable personalized recommendations. 
+
 Files Used : From the MovieLens Dataset, the following files were combined to create the final dataset:
 1. genome_scores.csv: Provides tag relevance scores for movies.
 2. movie.csv: Contains detailed information about movies, such as titles and genres.
@@ -22,21 +24,21 @@ system.
 
 ### Data Cleaning and Pre-Processing:
 In the data cleaning step, we performed essential operations to ensure the dataset is free of errors, inconsistencies, and redundancies, making it suitable for further analysis. Below are the tasks performed:
-● Missing Value Check:
-○ Verified the dataset for missing values across all columns using the colSums(is.na()) function.
-○ Result: No missing values were found, confirming data completeness.
+1.Missing Value Check:
+ 1.Verified the dataset for missing values across all columns using the colSums(is.na()) function.
+ 2.Result: No missing values were found, confirming data completeness.
 
-● Duplicate Row Check:
-○ Checked for duplicate entries using the duplicated() function.
-○ Result: No duplicate rows were found, ensuring that the data is unique and reliable.
+2.Duplicate Row Check:
+ 1. Checked for duplicate entries using the duplicated() function.
+ 2.Result: No duplicate rows were found, ensuring that the data is unique and reliable.
 
-● Unique Value Exploration:
-○ Counted the number of distinct userId and movieId entries in the dataset using the n_distinct() function.
+3. Unique Value Exploration:
+ 1.Counted the number of distinct userId and movieId entries in the dataset using the n_distinct() function.
 
-○ Result:
-● Unique Users: 138,493
-● Unique Movies: 27,278
-○ This confirms that the dataset contains a diverse range of users and movies for robust recommendation modeling.
+4. Result:
+ 1.Unique Users: 138,493
+ 2.Unique Movies: 27,278
+ 3.This confirms that the dataset contains a diverse range of users and movies for robust recommendation modeling.
 
 ### Normalization
 Normalization is a crucial step in the preprocessing pipeline to ensure that all features are on a similar scale, particularly for numerical data.[14] This step helps in improving the efficiency and accuracy of algorithms that are sensitive to feature magnitudes, such as machine learning models.
@@ -69,8 +71,8 @@ Feature selection is a vital step in preprocessing to enhance the efficiency and
 #### Algorithms Used:
 #### 1. User-Based Collaborative Filtering (UBCF)
 ##### Definition:
-User-based collaborative filtering recommends movies based on similarities between users. If two users rate movies similarly, movies liked by one user are recommended to
-the other.
+User-based collaborative filtering recommends movies based on similarities between users. If two users rate movies similarly, movies liked by one user are recommended to the other.
+
 ##### Steps in Implementation:
 ##### ● Data Preparation:
 ○ The data was loaded and filtered to include relevant columns: userId,movieId, and rating.
@@ -180,42 +182,38 @@ By combining these methods, the hybrid model improves recommendation accuracy an
 
 ##### Implementation Steps
 ##### 1. Data Preparation:
-○ The dataset was loaded and filtered for relevant columns like userId, movieId, rating, and title.
-○ A rating matrix was created using the dcast function, with rows as users and columns as movies.
-○ The matrix was converted to a realRatingMatrix for compatibility with the recommenderlab package.
+1.The dataset was loaded and filtered for relevant columns like userId, movieId, rating, and title.
+2.A rating matrix was created using the dcast function, with rows as users and columns as movies.
+3.The matrix was converted to a realRatingMatrix for compatibility with the recommenderlab package.
 ##### 2. Model Creation:
-○ User-Based Collaborative Filtering (UBCF):
-■ Built using the Recommender function with the UBCF method.
-○ Item-Based Collaborative Filtering (IBCF):
-■ Created using the Recommender function with the IBCF method.
-○ Content-Based Filtering (CBF):
-■ Simulated with the RANDOM method for this hybrid implementation.
-○ These models independently generate recommendations based on their respective techniques.
+1.User-Based Collaborative Filtering (UBCF):Built using the Recommender function with the UBCF method.
+2.Item-Based Collaborative Filtering (IBCF):Created using the Recommender function with the IBCF method.
+3. Content-Based Filtering (CBF):Simulated with the RANDOM method for this hybrid implementation.
+These models independently generate recommendations based on their respective techniques.
 
 ##### 3. Hybrid Model:
-○ For each user, recommendations were generated from UBCF, IBCF, and CBF.
-○ These recommendations were combined into a single list, ensuring unique entries.
-○ If multiple users rated the same movies, their recommendations were intersected to find common suggestions.
-○ A fallback mechanism was implemented to provide recommendations even if fewer users rated the input movies.
+1. For each user, recommendations were generated from UBCF, IBCF, and CBF.
+2.These recommendations were combined into a single list, ensuring unique entries.
+3. If multiple users rated the same movies, their recommendations were intersected to find common suggestions.
+4. A fallback mechanism was implemented to provide recommendations even if fewer users rated the input movies.
 
 ##### 4. Final Recommendations:
-○ Recommendations were derived from the union of UBCF, IBCF, and CBF outputs.
-○ If common movies existed, they were prioritized. Otherwise, unique movies were sampled to fill the required number of recommendations.
-○ Titles for the recommended movies were extracted for display.
+1.Recommendations were derived from the union of UBCF, IBCF, and CBF outputs.
+2. If common movies existed, they were prioritized. Otherwise, unique movies were sampled to fill the required number of recommendations.
+3. Titles for the recommended movies were extracted for display.
 
-##### ● Test Recommendations:
-○ Input Movies: Popular movies like Jurassic Park (1993) and Toy Story (1995).
-○ Final Recommendations:
-■ Eternal Sunshine of the Spotless Mind (2004)
-■ Apocalypse Now (1979)
-■ Sin City (2005)
-■ Cloudy with a Chance of Meatballs (2009)
-■ Punisher, The (2004)
+#####  Test Recommendations:
+1. Input Movies: Popular movies like Jurassic Park (1993) and Toy Story (1995).
+2 Final Recommendations:
+  1.Eternal Sunshine of the Spotless Mind (2004)
+  2.Apocalypse Now (1979)
+  3.Sin City (2005)
+  4.Cloudy with a Chance of Meatballs (2009)
+  5.Punisher, The (2004)
 
 
-##### ● Insights:
-○ The hybrid model leveraged the diversity of recommendations from UBCF, IBCF, and CBF.
-○ By combining user preferences and item similarities with content-based insights, it ensured a balance of novelty and relevance in the recommendations.
+##### Insights:
+The hybrid model leveraged the diversity of recommendations from UBCF, IBCF, and CBF. By combining user preferences and item similarities with content-based insights, it ensured a balance of novelty and relevance in the recommendations.
 
 ##### Architecture:
 ● Data was split into training and testing sets.
@@ -226,28 +224,25 @@ By combining these methods, the hybrid model improves recommendation accuracy an
 ##### User Interface (UI)
 ##### Description: 
 The recommendation system includes a simple UI developed using Streamlit. Users can input previously watched movies and preferences to receive personalized recommendations.
-● Dynamic display of recommendations.
-● Ability to process multiple input sets in bulk.
+Dynamic display of recommendations.
+Ability to process multiple input sets in bulk.
 
 ##### Key Features:
-1. Algorithm Selection:
-○ A dropdown menu allows users to select from the following recommendation algorithms:
-■ User-Based Collaborative Filtering (UBCF)
-■ Item-Based Collaborative Filtering (IBCF)
-■ Content-Based Filtering
-■ Hybrid Recommendation System (Recommended)
-○ By default, the system is set to the Hybrid Recommendation System, as it combines the strengths of all other algorithms and provides the most balanced recommendations.
+1. Algorithm Selection:A dropdown menu allows users to select from the following recommendation algorithms:
+ 1.User-Based Collaborative Filtering (UBCF)
+ 2.Item-Based Collaborative Filtering (IBCF)
+ 3.Content-Based Filtering
+ 4.Hybrid Recommendation System (Recommended)
+By default, the system is set to the Hybrid Recommendation System, as it combines the strengths of all other algorithms and provides the most balanced recommendations.
 
 ##### 3. Movie Input Field:
-○ Users can input movie titles (separated by semicolons) to serve as the base for generating recommendations.
+Users can input movie titles (separated by semicolons) to serve as the base for generating recommendations.
 
 ##### 4. Recommendation Count Selector:
-○ A simple counter allows users to specify the desired number of recommendations by
-increasing or decreasing the value with “+” or “-” buttons.
+A simple counter allows users to specify the desired number of recommendations by increasing or decreasing the value with “+” or “-” buttons.
 
 ##### 5. Dynamic Display of Results:
-○ Once the user clicks the “Get Recommendations” button, the results are displayed in a
-clean, tabular format, showing the recommended movies along with their metadata.
+Once the user clicks the “Get Recommendations” button, the results are displayed in a clean, tabular format, showing the recommended movies along with their metadata.
 
 ##### Conclusion: 
 This UI ensures an accessible and interactive experience for users. By defaulting to the hybrid model, the system delivers optimal recommendations while still allowing users to explore alternative algorithms. Its intuitive design makes it adaptable for diverse user needs and enhances overall engagement with the recommendation system.
